@@ -37,3 +37,4 @@ class Nodo:
 
     def __str__(self):
         return f"Nodo(Estado={self.estado}, G={self.g}, H={self.h}, F={self.f}, Cal={self.cal})"
+
