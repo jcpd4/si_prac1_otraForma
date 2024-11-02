@@ -76,9 +76,7 @@ class Mapa:
         fila = casilla.getFila()
         columna = casilla.getCol()
         
-        tipo = self.mapa[fila][columna]  # Obtenemos el valor del mapa para esa casilla
-        print("tipo de casilla", tipo)
-        
+        tipo = self.mapa[fila][columna]  # Obtenemos el valor del mapa para esa casilla        
         if tipo == 0:
             return "hierba"
         elif tipo == 4:
