@@ -26,11 +26,42 @@ def calcular_caloria(nodo_padre, estado, mapi):
     else:
         return cal_terreno
 
+def existe_en_lista_interior(lista_interior, casilla):
+    """
+    Verifica si una casilla ya existe en lista_interior basada en sus coordenadas.
+
+    :param lista_interior: Lista de objetos Casilla explorados.
+    :param casilla: Objeto Casilla a verificar.
+    :return: True si existe, False en caso contrario.
+    """
+    fila = casilla.getFila()
+    columna = casilla.getCol()
+    for c in lista_interior:
+        if c.getFila() == fila and c.getCol() == columna:
+            return True
+    return False
+
+def existe_en_lista_frontera(lista_frontera, casilla):
+    """
+    Verifica si una casilla ya existe en lista_frontera basada en sus coordenadas.
+
+    :param lista_frontera: Lista de objetos Nodo en la frontera.
+    :param casilla: Objeto Casilla a verificar.
+    :return: True si existe, False en caso contrario.
+    """
+    fila = casilla.getFila()
+    columna = casilla.getCol()
+    for nodo in lista_frontera:
+        estado = nodo.getEstado()
+        if estado.getFila() == fila and estado.getCol() == columna:
+            return True
+    return False
+
 def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimiento_func, tipo_heuristica, epsilon, mapi):
     """
     Algoritmo A* Subε que relaja la restricción de optimalidad.
     Imprime una traza detallada de cada iteración.
-    
+
     :param camino: Matriz para marcar el camino encontrado.
     :param inicio: Casilla de inicio.
     :param meta: Casilla de destino.
@@ -42,14 +73,13 @@ def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimient
     :return: Tupla (coste, calorías) del camino encontrado.
     """
     lista_frontera = []
-    lista_interior = []  # Usar lista en lugar de set
+    lista_interior = []  # Lista de objetos Casilla explorados
 
     # Nodo inicial con la heurística seleccionada y calorías iniciales
     cal_inicial = calcular_caloria(None, inicio, mapi)
     nodo_inicial = Nodo(inicio, None, 0, tipo_heuristica(inicio, meta), cal=cal_inicial)
     heapq.heappush(lista_frontera, nodo_inicial)
 
-    f_final = -1  # Coste final, inicialmente -1
     iteracion = 1
 
     while lista_frontera:
@@ -63,8 +93,9 @@ def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimient
         lista_frontera.remove(nodo_actual)
         heapq.heapify(lista_frontera)  # Reordenar la lista_frontera después de la eliminación
 
-        # Añadir el nodo actual a la lista interior (nodos ya explorados)
-        lista_interior.append(nodo_actual.getEstado())
+        # Añadir el nodo actual a la lista interior (nodos ya explorados) si no está ya presente
+        if not existe_en_lista_interior(lista_interior, nodo_actual.getEstado()):
+            lista_interior.append(nodo_actual.getEstado())
 
         # Mostrar Iteración
         print(f"\nIteración : {iteracion}")
@@ -74,7 +105,8 @@ def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimient
         vecinos = obtener_vecinos(nodo_actual.getEstado())
         nodos_vecinos = []
         for vecino in vecinos:
-            if vecino not in lista_interior:
+            # Solo consideramos vecinos que no están en lista_interior ni en lista_frontera
+            if not existe_en_lista_interior(lista_interior, vecino) and not existe_en_lista_frontera(lista_frontera, vecino):
                 nodos_vecinos.append(f"({vecino.getFila()},{vecino.getCol()})")
         print(f"Nodos_vecinos: {' '.join(nodos_vecinos)}")
 
@@ -96,7 +128,8 @@ def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimient
 
         # Expandir los vecinos del nodo actual
         for vecino in vecinos:
-            if vecino in lista_interior:
+            # Verificar si el vecino ya está en lista_interior
+            if existe_en_lista_interior(lista_interior, vecino):
                 continue
 
             # Calcular el nuevo coste g
@@ -114,14 +147,8 @@ def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimient
                 cal=cal_nueva
             )
 
-            # Verificar si el vecino ya está en la lista_frontera con un menor g
-            existe_frontera = False
-            for nodo in lista_frontera:
-                if nodo == nodo_vecino and nodo.g <= nodo_vecino.g:
-                    existe_frontera = True
-                    break
-
-            if not existe_frontera:
+            # Verificar si el vecino ya está en lista_frontera
+            if not existe_en_lista_frontera(lista_frontera, vecino):
                 heapq.heappush(lista_frontera, nodo_vecino)
 
         iteracion +=1
@@ -131,7 +158,7 @@ def a_estrella_subepsilon(camino, inicio, meta, obtener_vecinos, costo_movimient
 def reconstruir_camino(nodo, mapi, camino):
     """
     Reconstruye el camino desde el nodo final hasta el inicial y lo marca en 'camino'.
-    
+
     :param nodo: Nodo final (destino).
     :param mapi: Objeto Mapa.
     :param camino: Matriz para marcar el camino.
@@ -152,7 +179,7 @@ def reconstruir_camino(nodo, mapi, camino):
 def mostrar_camino(camino, mapi):
     """
     Imprime el camino encontrado y visualiza el mapa con el camino marcado.
-    
+
     :param camino: Lista de objetos Casilla que forman el camino.
     :param mapi: Objeto Mapa.
     """
@@ -160,9 +187,7 @@ def mostrar_camino(camino, mapi):
     camino_str = ','.join([f"({casilla.getFila()},{casilla.getCol()})" for casilla in camino])
     print(camino_str)
 
-    # Opcional: Visualización del mapa con el camino marcado ('*')
-    # Nota: Esto imprimirá una representación textual del mapa en la consola.
-    # Puedes adaptarlo según tus necesidades.
+    # Visualización del mapa con el camino marcado ('*')
     print("\nVisualización del Camino en el Mapa:")
     mapa_visual = [
         [mapi.getCelda(fila, columna) for columna in range(mapi.getAncho())]
@@ -174,5 +199,9 @@ def mostrar_camino(camino, mapi):
         mapa_visual[fila][columna] = '*'  # Marca el camino con '*'
 
     for fila in mapa_visual:
-        fila_mostrar = ' '.join(['*' if celda == '*' else '.' if celda == 0 else '#' if celda ==1 else '~' if celda==4 else '*' if celda==5 else '.' for celda in fila])
+        fila_mostrar = ' '.join([
+            '*' if celda == '*' else '.' if celda == 0 else '#' if celda ==1 else '~' if celda==4 else '*' if celda==5 else '.' 
+            for celda in fila
+        ])
         print(fila_mostrar)
+
